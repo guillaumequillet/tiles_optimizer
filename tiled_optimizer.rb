@@ -15,9 +15,6 @@ class TiledMap
     @tile_size = 16
     @tileset = GLTexture.load_tiles('gfx/tileset.png', @tile_size, @tile_size)
     auto_rectangles
-    total_rects = 0
-    @rects.each_value {|v| total_rects += v.size}
-    p total_rects
   end
 
   def auto_rectangles
@@ -107,6 +104,7 @@ class TiledMap
   end
 
   def draw
+    drawn_quads = 0
     @rects.each do |tile_id, quads|
       glBindTexture(GL_TEXTURE_2D, @tileset[tile_id].get_id)
       glPushMatrix
@@ -118,10 +116,12 @@ class TiledMap
           glTexCoord2d(0, l); glVertex3i(x, 0, z+l)
           glTexCoord2d(w, l); glVertex3i(x+w, 0, z+l)
           glTexCoord2d(w, 0); glVertex3i(x+w, 0, z)
+          drawn_quads += 1
         end
       glEnd
       glPopMatrix
     end
+    p "Drawn Quads : " + drawn_quads.to_s
   end
 end
 
