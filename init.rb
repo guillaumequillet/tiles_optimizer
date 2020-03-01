@@ -37,7 +37,7 @@ class Window < Gosu::Window
 
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity
-      gluLookAt(150, 250, 500,  150, 0, 0,  0, 1, 0)
+      gluLookAt(150, 50, 300,  150, 0, 0,  0, 1, 0)
 
       @tiled_map.draw
     end

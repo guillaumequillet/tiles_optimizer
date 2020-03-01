@@ -6,7 +6,7 @@ class TiledMap
     @width = infos["width"]
     @height = infos["height"]
     infos["layers"].each do |layer|
-      if layer["name"] == 'floor'
+      if layer["name"] == 'floors'
         @tiles = layer["data"].map {|e| e - 1}
       end
 
@@ -14,40 +14,39 @@ class TiledMap
     end
     @tile_size = 16
     @tileset = GLTexture.load_tiles('gfx/tileset.png', @tile_size, @tile_size)
-    auto_rectangles
+    @rects = auto_rectangles(@tiles)
   end
 
-  def auto_rectangles
-    @rects = {}
+  def auto_rectangles(data)
+    @reserved = []
+    rects = {}
     @height.times do |y|
       @width.times do |x|
         next if defined?(@reserved) && @reserved.include?([x, y])
-        rect = get_rectangle(x, y)
+        rect = get_rectangle(data, x, y)
         unless rect.nil?
           tile, x, z, w, l = rect
-          @rects[tile] = [] unless @rects.has_key?(tile)
-          @rects[tile].push [x, z, w, l]
+          rects[tile] = [] unless rects.has_key?(tile)
+          rects[tile].push [x, z, w, l]
         end
       end
     end
-    return @rects
+    return rects
   end
 
-  def get_tile(x, y)
-    @tiles[y * @width + x]
+  def get_tile(data, x, y)
+    data[y * @width + x]
   end
 
-  def get_rectangle(x, y)
-    @reserved ||= []
-
+  def get_rectangle(data, x, y)
     return nil if @reserved.include?([x, y])
 
-    tile = get_tile(x, y)
+    tile = get_tile(data, x, y)
 
     min_x = x
     try_x = x
     while try_x >= 0
-      if !@reserved.include?([try_x, y]) && get_tile(try_x, y) == tile
+      if !@reserved.include?([try_x, y]) && get_tile(data, try_x, y) == tile
         min_x = try_x 
         try_x -= 1
       else
@@ -56,7 +55,7 @@ class TiledMap
     end
     max_x = x
     for try_x in x...@width
-      if !@reserved.include?([try_x, y]) && get_tile(try_x, y) == tile
+      if !@reserved.include?([try_x, y]) && get_tile(data, try_x, y) == tile
         max_x = try_x 
       else
         break
@@ -68,7 +67,7 @@ class TiledMap
     while try_y >= 0
       tile_ok = true
       for try_x in min_x..max_x
-        tile_ok = false if @reserved.include?([try_x, try_y]) || get_tile(try_x, try_y) != tile
+        tile_ok = false if @reserved.include?([try_x, try_y]) || get_tile(data, try_x, try_y) != tile
       end
       if tile_ok
         min_y = try_y
@@ -82,7 +81,7 @@ class TiledMap
     for try_y in (y + 1)...@height
       tile_ok = true
       for try_x in min_x..max_x
-        tile_ok = false if @reserved.include?([try_x, try_y]) || get_tile(try_x, try_y) != tile
+        tile_ok = false if @reserved.include?([try_x, try_y]) || get_tile(data, try_x, try_y) != tile
       end
       if tile_ok
         max_y = try_y 
