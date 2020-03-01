@@ -3,18 +3,22 @@ require 'json'
 class TiledMap
   def initialize(filename)
     infos = JSON.parse(File.read(filename))
-    @width = infos["width"]
-    @height = infos["height"]
-    infos["layers"].each do |layer|
-      if layer["name"] == 'floors'
+    @width = infos['width']
+    @height = infos['height']
+    infos['layers'].each do |layer|
+      case layer['name']
+      when 'floors'
         @tiles = layer["data"].map {|e| e - 1}
+      when 'walls'
+        @walls = layer["data"].map {|e| e - 1}
       end
-
-      # TODO : handle walls layer
     end
     @tile_size = 16
     @tileset = GLTexture.load_tiles('gfx/tileset.png', @tile_size, @tile_size)
-    @rects = auto_rectangles(@tiles)
+    @tiles_rects = auto_rectangles(@tiles)
+    @walls_rects = auto_rectangles(@walls)
+
+    p @walls_rects
   end
 
   def auto_rectangles(data)
@@ -42,6 +46,7 @@ class TiledMap
     return nil if @reserved.include?([x, y])
 
     tile = get_tile(data, x, y)
+    return nil if tile == -1
 
     min_x = x
     try_x = x
@@ -104,7 +109,7 @@ class TiledMap
 
   def draw
     drawn_quads = 0
-    @rects.each do |tile_id, quads|
+    @tiles_rects.each do |tile_id, quads|
       glBindTexture(GL_TEXTURE_2D, @tileset[tile_id].get_id)
       glPushMatrix
       glScalef(@tile_size, @tile_size, @tile_size)
