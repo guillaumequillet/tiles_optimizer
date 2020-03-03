@@ -1,3 +1,8 @@
+=begin
+  TODO : 
+  - handle walls better : playing with visibility, but also w, l, x, and z related to other walls
+=end
+
 require 'json'
 
 class TiledMap
@@ -15,10 +20,18 @@ class TiledMap
     end
     @tile_size = 16
     @tileset = GLTexture.load_tiles('gfx/tileset.png', @tile_size, @tile_size)
+    @wallset = GLTexture.load_tiles('gfx/wallset.png', @tile_size, @tile_size * 3)
+    remove_below_walls_tiles
     @tiles_rects = auto_rectangles(@tiles)
     @walls_rects = auto_rectangles(@walls)
+  end
 
-    p @walls_rects
+  def remove_below_walls_tiles
+    @walls.each_with_index do |wall, id|
+      if wall != -1
+        @tiles[id] = -1
+      end
+    end
   end
 
   def auto_rectangles(data)
@@ -95,20 +108,16 @@ class TiledMap
       end
     end
 
-    # tile, x, y, w, h
-    bounds = [tile, min_x, min_y, max_x - min_x + 1, max_y - min_y + 1]
-
     for y in min_y..max_y
       for x in min_x..max_x
         @reserved.push [x, y]
       end
     end
 
-    return bounds
+    return [tile, min_x, min_y, max_x - min_x + 1, max_y - min_y + 1]
   end
 
   def draw
-    drawn_quads = 0
     @tiles_rects.each do |tile_id, quads|
       glBindTexture(GL_TEXTURE_2D, @tileset[tile_id].get_id)
       glPushMatrix
@@ -120,12 +129,67 @@ class TiledMap
           glTexCoord2d(0, l); glVertex3i(x, 0, z+l)
           glTexCoord2d(w, l); glVertex3i(x+w, 0, z+l)
           glTexCoord2d(w, 0); glVertex3i(x+w, 0, z)
-          drawn_quads += 1
         end
       glEnd
       glPopMatrix
     end
-    p "Drawn Quads : " + drawn_quads.to_s
+
+    # walls tops
+    @walls_rects.each_value do |quads|
+      glBindTexture(GL_TEXTURE_2D, @tileset[0].get_id)
+      glPushMatrix
+      glScalef(@tile_size, @tile_size, @tile_size)
+      glBegin(GL_QUADS)
+        quads.each do |quad|
+          x, z, w, l = quad
+          glTexCoord2d(0, 0); glVertex3i(x, 3, z)
+          glTexCoord2d(0, l); glVertex3i(x, 3, z+l)
+          glTexCoord2d(w, l); glVertex3i(x+w, 3, z+l)
+          glTexCoord2d(w, 0); glVertex3i(x+w, 3, z)
+        end
+      glEnd
+      glPopMatrix
+    end
+
+    @walls_rects.each do |tile_id, quads|
+      glBindTexture(GL_TEXTURE_2D, @wallset[tile_id].get_id)
+      glPushMatrix
+      glScalef(@tile_size, @tile_size * 3, @tile_size)
+      glBegin(GL_QUADS)
+        quads.each do |quad|
+          x, z, w, l = quad
+
+          # back wall
+          glColor3ub(255, 255, 255)
+          glTexCoord2d(0, 0); glVertex3i(x, 1, z)
+          glTexCoord2d(0, 1); glVertex3i(x, 0, z)
+          glTexCoord2d(w, 1); glVertex3i(x+w, 0, z)
+          glTexCoord2d(w, 0); glVertex3i(x+w, 1, z)
+
+          # front wall
+          glColor3ub(255, 255, 255)
+          glTexCoord2d(0, 0); glVertex3i(x, 1, z+l)
+          glTexCoord2d(0, 1); glVertex3i(x, 0, z+l)
+          glTexCoord2d(w, 1); glVertex3i(x+w, 0, z+l)
+          glTexCoord2d(w, 0); glVertex3i(x+w, 1, z+l)
+
+          # left wall
+          glColor3ub(128, 128, 128)
+          glTexCoord2d(0, 0); glVertex3i(x, 1, z)
+          glTexCoord2d(0, 1); glVertex3i(x, 0, z)
+          glTexCoord2d(l, 1); glVertex3i(x, 0, z+l)
+          glTexCoord2d(l, 0); glVertex3i(x, 1, z+l)
+
+          # right wall   
+          glColor3ub(128, 128, 128)
+          glTexCoord2d(0, 0); glVertex3i(x+w, 1, z)
+          glTexCoord2d(0, 1); glVertex3i(x+w, 0, z)
+          glTexCoord2d(l, 1); glVertex3i(x+w, 0, z+l)
+          glTexCoord2d(l, 0); glVertex3i(x+w, 1, z+l)       
+        end
+      glEnd
+      glPopMatrix
+      glColor3ub(255, 255, 255)
+    end
   end
 end
-
